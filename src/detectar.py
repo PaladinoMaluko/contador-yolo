@@ -10,6 +10,7 @@ AZUL = (255, 0, 0)
 VERDE = (0, 255, 0)
 BRANCO = (255, 255, 255)
 
+Path(VIDEO_SAIDA).parent.mkdir(parents=True, exist_ok=True)
 
 modelo = YOLO("yolo11n.pt")
 
