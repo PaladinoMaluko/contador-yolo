@@ -4,7 +4,7 @@ from ultralytics import YOLO
 
 VIDEO_ENTRADA = "videos/transito.mp4"
 VIDEO_SAIDA = "saidas/detectado.mp4"
-EXTENSAO = Path(VIDEO_ENTRADA).suffix.lower()
+EXTENSAO = Path(VIDEO_SAIDA).suffix.lower()
 VERMELHO = (0, 0, 255)
 AZUL = (255, 0, 0)
 VERDE = (0, 255, 0)
@@ -13,7 +13,6 @@ BRANCO = (255, 255, 255)
 Path(VIDEO_SAIDA).parent.mkdir(parents=True, exist_ok=True)
 
 modelo = YOLO("yolo11n.pt")
-
 
 capt = cv2.VideoCapture(VIDEO_ENTRADA)
 if not capt.isOpened():
