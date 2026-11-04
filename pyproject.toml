@@ -1,0 +1,16 @@
+[project]
+name = "contador-yolo"
+version = "0.1.0"
+description = "Contagem de veículos em vídeo com YOLO e tracking"
+requires-python = ">=3.10"
+dependencies = [
+    "ultralytics",
+    "lap",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

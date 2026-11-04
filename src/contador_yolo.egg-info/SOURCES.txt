@@ -1,0 +1,7 @@
+pyproject.toml
+src/contador/__init__.py
+src/contador_yolo.egg-info/PKG-INFO
+src/contador_yolo.egg-info/SOURCES.txt
+src/contador_yolo.egg-info/dependency_links.txt
+src/contador_yolo.egg-info/requires.txt
+src/contador_yolo.egg-info/top_level.txt
