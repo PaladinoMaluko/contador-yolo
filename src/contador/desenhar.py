@@ -162,13 +162,14 @@ if __name__ == "__main__":
                             imgsz=480, verbose=False)
         result = results[0]
         for caixa in result.boxes:
+
+            if caixa.id is None:
+                continue
+            
             x1, y1, x2, y2 = map(int, caixa.xyxy[0])
             class_id = int(caixa.cls[0])
             confianca = float(caixa.conf[0])
             nome = modelo.names[class_id]
-
-            if caixa.id is None:
-                continue
 
             track_id = int(caixa.id[0])
 
