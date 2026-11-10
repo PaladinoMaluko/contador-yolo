@@ -10,7 +10,7 @@ from .contagem import ContadorLinha
 from .desenhar import criar_estilo 
 from .desenhar import desenhar_linha, desenhar_painel, desenhar_veiculo
 
-from .video import abrir_video, criar_gravador
+from .video import abrir_video, criar_gravador, validar_extensao
 
 CLASSES_PADRAO = {"car", "truck", "bus", "motorcycle"}
 
@@ -37,7 +37,10 @@ def processar_video(entrada: str | Path,
         O contador com os totais por classe e por direção.
     """
     if linha_proporcao <= 0 or linha_proporcao >= 1:
-        raise ValueError(f"linha_y({linha_proporcao}) com valores incorretos (fora do escopo de 0 e 1)")
+        raise ValueError(f"A proporção da linha deve estar entre 0 e 1 (sem incluí-los); recebido: {linha_proporcao}")
+    
+    saida = Path(saida)
+    validar_extensao(saida)
 
     if classes is None:
         classes = set(CLASSES_PADRAO)

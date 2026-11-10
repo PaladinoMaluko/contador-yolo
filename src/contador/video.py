@@ -48,6 +48,15 @@ def abrir_video(caminho: str | Path) -> tuple[cv2.VideoCapture, InfoVideo]:
     )
     return captura, info
 
+def validar_extensao(caminho: Path) -> str:
+    """Valida se a extensão está entre as do CODECS"""
+    extensao = caminho.suffix.lower()
+    if extensao not in CODECS:
+        suportadas = ", ".join(CODECS)
+        raise ValueError(f"Extensão não suportada: {extensao}. Use alguma dessas: {suportadas}")
+    return extensao
+
+
 def criar_gravador(caminho: str | Path, info: InfoVideo) -> cv2.VideoWriter:
     """Cria um gravador de vídeo com o mesmo tamanho e FPS do original.
 
@@ -55,13 +64,9 @@ def criar_gravador(caminho: str | Path, info: InfoVideo) -> cv2.VideoWriter:
     é criada se não existir.
     Levanta ValueError para extensões não suportadas.
     """
-
     caminho = Path(caminho)
-    extensao = caminho.suffix.lower()
-    if extensao not in CODECS:
-        suportadas = ", ".join(CODECS)
-        raise ValueError(f"Extensão não suportada: {extensao}. Use alguma dessas: {suportadas}")
-
+    extensao = validar_extensao(caminho)
+    
     caminho.parent.mkdir(parents=True, exist_ok=True)
 
     fourcc = cv2.VideoWriter_fourcc(*CODECS[extensao])
