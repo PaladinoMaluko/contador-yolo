@@ -5,7 +5,8 @@ import uuid
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .processador import CLASSES_PADRAO, processar_video
@@ -20,6 +21,7 @@ class ResultadoContagem(BaseModel):
     total: int
     por_classe: dict[str, int]
     por_direcao: dict[str, int]
+    url_video: str
     
 
 app = FastAPI(
@@ -38,21 +40,41 @@ def classes() -> dict[str, list[str]]:
     """Retorna a lista de classes que podem ser contadas"""
     return {"classes": sorted(CLASSES_PADRAO)}
 
+@app.get("/videos/{id_video}/anotado")
+def baixa_video(id_video: str) -> FileResponse:
+    """Devolve o video anotado de um processamento"""
+    try:
+        uuid.UUID(id_video)
+    except ValueError as erro:
+        mensagem = f"id=({id_video}) não é um id válido."
+        raise HTTPException(status_code=400, detail=mensagem) from erro
+    
+    caminho = PASTA_SAIDAS / f"{id_video}.mp4"
+    if not caminho.is_file():
+        raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+
+    return FileResponse(
+        caminho,
+        media_type="video/mp4",
+        filename=f"contagem_{id_video}.mp4",
+    )
+
 @app.post("/videos")
 def enviar_video(
+    request: Request,
     arquivo: Annotated[UploadFile, File(description="video a ser processado")],
     linha: Annotated[float, Form(description="altura da linha, entre 0 e 1")] = 0.6,
-    classes: Annotated[list[str] | None, Form(description="Define quais ou qual veículo será contado")] = None
+    classes: Annotated[list[str] | None, Form(description="Define quais ou qual veículo será contado")] = None,
 ) -> ResultadoContagem:
     """Recebe um video, conta os veículos que cruzam a linha e devolve a
     contagem"""
     if classes is not None:
 
-        if any(not nome.strip(" ") for nome in classes):
+        if any(not nome.strip() for nome in classes):
             mensagem = f"Nome de classe não informado"
             raise HTTPException(status_code=400, detail=mensagem)
         
-        classes = {nome.lower() for nome in classes}
+        classes = {nome.lower().strip() for nome in classes}
         invalidas = classes - CLASSES_PADRAO
         if invalidas:
             mensagem = f"Classe(s) inválida(s): {', '.join(sorted(invalidas))}. Classes permitidas:{', '.join(sorted(CLASSES_PADRAO))}"
@@ -87,6 +109,6 @@ def enviar_video(
         total=contador.total,
         por_classe=dict(contador.por_classe),
         por_direcao=dict(contador.por_direcao),
-    )    
-
+        url_video=str(request.url_for("baixa_video", id_video=id_video))
+    )   
 
