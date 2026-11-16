@@ -14,6 +14,12 @@ from .video import abrir_video, criar_gravador, validar_extensao
 
 CLASSES_PADRAO = {"car", "truck", "bus", "motorcycle"}
 
+def validar_linha(linha_proporcao : float) -> float:
+    """Valida se a linha está entre os valores de 0 a 1"""
+    if linha_proporcao <= 0 or linha_proporcao >= 1:
+        raise ValueError(f"A proporção da linha deve estar entre 0 e 1 (sem incluí-los); recebido: {linha_proporcao}")
+    return linha_proporcao
+
 def processar_video(entrada: str | Path, 
                     saida: str | Path, 
                     modelo: str = "yolo11n.pt", 
@@ -36,9 +42,8 @@ def processar_video(entrada: str | Path,
     Returns:
         O contador com os totais por classe e por direção.
     """
-    if linha_proporcao <= 0 or linha_proporcao >= 1:
-        raise ValueError(f"A proporção da linha deve estar entre 0 e 1 (sem incluí-los); recebido: {linha_proporcao}")
-    
+    linha_proporcao = validar_linha(linha_proporcao)
+
     saida = Path(saida)
     validar_extensao(saida)
 
