@@ -1,13 +1,13 @@
 """API HTTP do contador de veículos"""
-
-import shutil
 import uuid
 from pathlib import Path
 from typing import Annotated, Literal
 from dataclasses import dataclass
+import time
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse
@@ -16,9 +16,18 @@ from pydantic import BaseModel
 from .processador import CLASSES_PADRAO, processar_video, validar_linha
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s"
+)
 
-PASTA_ENTRADAS = Path("uploads")
-PASTA_SAIDAS = Path("saidas")
+PASTA_DADOS = Path("dados_api")
+PASTA_ENTRADAS = PASTA_DADOS / "entradas"
+PASTA_SAIDAS = PASTA_DADOS / "saidas"
+
+TAMANHO_MAXIMO = 200 * 1024 * 1024  # 200 MB
+
+
 Situacao = Literal["na_fila", "processando", "concluido", "erro"]
 
 class Contagem(BaseModel):
@@ -51,6 +60,28 @@ class Tarefa:
 
 tarefas: dict[str, Tarefa] = {}
 
+
+def _limpar_pastas() -> None:
+    """Apaga os arquivos de execuções anteriores da API
+
+    As tarefas ficam em memória: depois de um reinício, nenhum arquivo antigo
+    pode mais ser consultado ou baixado
+    """
+    for pasta in (PASTA_ENTRADAS, PASTA_SAIDAS):
+        pasta.mkdir(parents=True, exist_ok=True)
+        for arquivo in pasta.iterdir():
+            if arquivo.is_file():
+                arquivo.unlink()
+
+@asynccontextmanager
+async def ciclo_de_vida(app: FastAPI):
+    """Prepara a API ao iniciar e libera os recursos ao desligar"""
+    _limpar_pastas()
+    yield
+    # Os vídeos que ainda estão na fila são cancelados e o que está
+    # processando não pode ser interrompido no meio
+    executor.shutdown(wait=False, cancel_futures=True)
+
 # Um vídeo por vez: o YOLO já ocupa a CPU toda, e vários em paralelo
 # ficariam todos lentos e disputando memória
 executor = ThreadPoolExecutor(max_workers=1)
@@ -58,7 +89,8 @@ executor = ThreadPoolExecutor(max_workers=1)
 app = FastAPI(
     title="Contador de veículos",
     description="Envie um video e receba a contagem dos veículos que cruzam a linha",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=ciclo_de_vida
 )
 
 def _processar_tarefa(
@@ -75,12 +107,15 @@ def _processar_tarefa(
         if total > 0:
             tarefa.progresso = atual / total
 
+    start = time.perf_counter()
     try:
+        logger.info("Tarefa iniciada %s", tarefa.id)
         contador = processar_video(
             entrada, saida, linha_proporcao=linha, classes=classes,
             ao_progredir=ao_progredir
         )
-    except FileNotFoundError:
+    except FileNotFoundError as erro:
+        logger.warning("Tarefa %s: video inválido (%s)", tarefa.id, erro)
         tarefa.situacao = "erro"
         tarefa.erro = "O arquivo enviado não é um video válido"
     except Exception:
@@ -90,6 +125,7 @@ def _processar_tarefa(
         tarefa.situacao = "erro"
         tarefa.erro = "Erro interno ao processar o video"
     else:
+        end = time.perf_counter()
         tarefa.contagem = Contagem(
             total=contador.total,
             por_classe=dict(contador.por_classe),
@@ -97,8 +133,13 @@ def _processar_tarefa(
         )
         tarefa.progresso = 1.0
         tarefa.situacao = "concluido"
+        total_tempo = end - start
+        logger.info("Tarefa %s concluida: %d veiculos em %.1fs", tarefa.id, contador.total, total_tempo)
     finally:
         entrada.unlink(missing_ok=True)
+        if tarefa.situacao != "concluido":
+            saida.unlink(missing_ok=True)
+
 
 def _montar_status(request: Request, tarefa: Tarefa) -> StatusTarefa:
     """Converte o estado interno da tarefa na resposta publica"""
@@ -198,11 +239,27 @@ def enviar_video(
     saida = PASTA_SAIDAS / f"{id_video}.mp4"
 
     PASTA_ENTRADAS.mkdir(parents=True, exist_ok=True)
+    contar_byte = 0
     with entrada.open("wb") as destino:
-        shutil.copyfileobj(arquivo.file, destino)
+        while True:
+            pedaco = arquivo.file.read(1024 * 1024) # 1 MB por vez
+            if not pedaco:
+                break
+            contar_byte += len(pedaco)
+            if contar_byte > TAMANHO_MAXIMO:
+                entrada.unlink(missing_ok=True)
+                limite_atual = TAMANHO_MAXIMO // (1024 * 1024)
+
+                logger.warning("Limite de MB (%s) ultrapassado %s", limite_atual, id_video)
+                raise HTTPException(status_code=413, detail=f"Limite de MB ({limite_atual}) ultrapassado")
+
+            destino.write(pedaco)
 
     tarefa = Tarefa(id=id_video)
     tarefas[id_video] = tarefa
+
+    logger.info("Tarefa recebida: %s", tarefa.id)
+
     executor.submit(_processar_tarefa, tarefa, entrada, saida, linha, classes)
     return _montar_status(request, tarefa)
 
