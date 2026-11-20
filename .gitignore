@@ -6,3 +6,4 @@ saidas/
 runs/
 uploads/
 dados_api/
+*.egg-info/

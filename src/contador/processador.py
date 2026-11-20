@@ -1,15 +1,11 @@
 """Junta vídeo, detecção, contagem e desenho num único processamento."""
-
 from collections.abc import Callable
 from pathlib import Path
 
 from ultralytics import YOLO
 
 from .contagem import ContadorLinha
-
-from .desenhar import criar_estilo 
-from .desenhar import desenhar_linha, desenhar_painel, desenhar_veiculo
-
+from .desenhar import criar_estilo, desenhar_linha, desenhar_painel, desenhar_veiculo
 from .video import abrir_video, criar_gravador, validar_extensao
 
 CLASSES_PADRAO = {"car", "truck", "bus", "motorcycle"}

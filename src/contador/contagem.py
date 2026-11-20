@@ -1,7 +1,7 @@
 """Contagem de objetos rastreados que cruzam uma linha horizontal."""
-
 from collections import Counter
 from dataclasses import dataclass
+
 
 @dataclass
 class Travessia:
@@ -63,13 +63,3 @@ class ContadorLinha:
     def total(self) -> int:
         """Total de objetos contados."""
         return sum(self.por_classe.values())
-
-
-if __name__ == "__main__":
-    c = ContadorLinha(linha_y=100, classes={"car", "truck"})
-
-    c.atualizar(1, "car", 80)
-    c.atualizar(1, "car", 90)
-    c.atualizar(1, "truck", 105)   # cruza como "truck"... deve contar como "car"
-
-    print(c.por_classe)

@@ -1,11 +1,10 @@
 """Ponto de entrada da linha de comando: 
 python -m contador --entrada ... --saida ..."""
-
 import argparse
 import sys
 
 from .contagem import ContadorLinha
-from .processador import processar_video, CLASSES_PADRAO
+from .processador import CLASSES_PADRAO, processar_video
 
 def criar_parser() -> argparse.ArgumentParser:
     """Define os argumentos aceitos pelo comando"""

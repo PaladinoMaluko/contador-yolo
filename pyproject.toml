@@ -5,8 +5,12 @@ description = "Contagem de veículos em vídeo com YOLO e tracking"
 requires-python = ">=3.10"
 dependencies = [
     "ultralytics",
-    "lap",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
 ]
+[project.scripts]
+contador = "contador.__main__:main"
 
 [build-system]
 requires = ["setuptools>=61"]

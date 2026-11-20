@@ -1,15 +1,14 @@
 """API HTTP do contador de veículos"""
-import uuid
-from pathlib import Path
-from typing import Annotated, Literal
-from dataclasses import dataclass
-import time
-
 import logging
+import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -222,7 +221,7 @@ def enviar_video(
     if classes is not None:
 
         if any(not nome.strip() for nome in classes):
-            mensagem = f"Nome de classe não informado"
+            mensagem = "Nome de classe não informado"
             raise HTTPException(status_code=400, detail=mensagem)
         
         classes = {nome.lower().strip() for nome in classes}

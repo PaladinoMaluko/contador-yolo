@@ -1,10 +1,10 @@
 """Funções que desenham as anotações (caixas, linha
 painel) nos frames recebidos."""
-
 from dataclasses import dataclass
 
 import cv2
 import numpy as np
+
 from .contagem import ContadorLinha
 
 
